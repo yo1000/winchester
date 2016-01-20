@@ -26,8 +26,8 @@ public class ReferencedDependency implements Analyzer {
             File file = path.toFile();
 
             if (file.isFile() && extensions.stream().anyMatch(ext -> file.getName().toLowerCase().endsWith(ext))) {
-                try {
-                    this.analyze(new FileInputStream(file)).forEach((key, val) -> {
+                try (InputStream stream = new FileInputStream(file)) {
+                    this.analyze(stream).forEach((key, val) -> {
                         Integer count = dependencies.get(key);
                         dependencies.put(key, count != null ? count + val : val);
                     });
@@ -55,22 +55,22 @@ public class ReferencedDependency implements Analyzer {
 
     protected Map<String, Integer> analyze(InputStream stream) throws IOException {
         ClassReader reader = new ClassReader(stream);
-        StringWriter writer = new StringWriter();
+        try (StringWriter writer = new StringWriter()) {
+            TraceClassVisitor visitor = new TraceClassVisitor(new PrintWriter(writer));
+            reader.accept(visitor, ClassReader.SKIP_FRAMES);
 
-        TraceClassVisitor visitor = new TraceClassVisitor(new PrintWriter(writer));
-        reader.accept(visitor, ClassReader.SKIP_FRAMES);
+            String trace = writer.toString();
+            Matcher matcher = CLASS_NAME_PATTERN.matcher(trace);
 
-        String trace = writer.toString();
-        Matcher matcher = CLASS_NAME_PATTERN.matcher(trace);
+            Map<String, Integer> dependencies = new TreeMap<>();
 
-        Map<String, Integer> dependencies = new TreeMap<>();
+            while (matcher.find()) {
+                String className = matcher.group(1);
+                int count = dependencies.containsKey(className) ? dependencies.get(className) : 0;
+                dependencies.put(className, count + 1);
+            }
 
-        while (matcher.find()) {
-            String className = matcher.group(1);
-            int count = dependencies.containsKey(className) ? dependencies.get(className) : 0;
-            dependencies.put(className, count + 1);
+            return dependencies;
         }
-
-        return dependencies;
     }
 }
