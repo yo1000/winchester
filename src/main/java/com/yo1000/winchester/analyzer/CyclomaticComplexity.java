@@ -22,8 +22,8 @@ public class CyclomaticComplexity implements Analyzer {
             File file = path.toFile();
 
             if (file.isFile() && extensions.stream().anyMatch(ext -> file.getName().toLowerCase().endsWith(ext))) {
-                try {
-                    dependencies.put(path.toString(), this.analyze(new FileInputStream(path.toFile())));
+                try (FileInputStream stream = new FileInputStream(path.toFile())) {
+                    dependencies.put(path.toString(), this.analyze(stream));
                 } catch (IOException e) {
                     throw new IllegalStateException(e);
                 }
@@ -47,8 +47,8 @@ public class CyclomaticComplexity implements Analyzer {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
             return reader.lines()
                     .map(line -> Collections.list(new StringTokenizer(line)).stream()
-                        .filter(token -> COMPLEXITY_TOKENS.contains(token))
-                        .count())
+                            .filter(token -> COMPLEXITY_TOKENS.contains(token))
+                            .count())
                     .reduce((totalTokens, lineTokens) -> totalTokens + lineTokens)
                     .get().intValue();
         }
