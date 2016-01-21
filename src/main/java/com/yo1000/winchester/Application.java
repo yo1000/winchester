@@ -5,7 +5,6 @@ import com.yo1000.winchester.analyzer.CyclomaticComplexity;
 import com.yo1000.winchester.analyzer.ReferencedDependency;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -35,9 +34,9 @@ public class Application {
 
     public static void main(String[] args) throws IOException {
         String analyzer = args.length >= 1 ? args[0] : null;
-        String directoryPath = args.length >= 2 ? "file:" + args[1] : null;
+        String directoryPath = args.length >= 2 ? args[1] : null;
 
-        ANALYZER_MAP.get(analyzer).analyze(Paths.get(URI.create(directoryPath)), EXTENSIONS_MAP.get(analyzer))
+        ANALYZER_MAP.get(analyzer).analyze(Paths.get(directoryPath), EXTENSIONS_MAP.get(analyzer))
                 .entrySet().stream()
                 .sorted((x, y) -> (int) (y.getValue() - x.getValue()))
                 .forEach(entry -> System.out.printf("%s %d\n", entry.getKey(), entry.getValue()));

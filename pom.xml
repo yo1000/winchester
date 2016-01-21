@@ -6,7 +6,7 @@
 
     <groupId>com.yo1000</groupId>
     <artifactId>winchester</artifactId>
-    <version>0.1.2.BETA</version>
+    <version>0.2.0.BETA</version>
 
     <dependencies>
         <dependency>

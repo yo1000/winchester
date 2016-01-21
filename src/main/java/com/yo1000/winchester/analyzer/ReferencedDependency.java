@@ -4,8 +4,11 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import java.io.*;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -19,34 +22,26 @@ public class ReferencedDependency implements Analyzer {
     protected static final Pattern CLASS_NAME_PATTERN = Pattern.compile("[()@ ]L([a-zA-Z0-9_\\$/]+);");
 
     @Override
-    public Map<String, Integer> analyze(Path directoryPath, List<String> extensions) throws IOException {
+    public Map<String, Integer> analyze(Path directory, List<String> extensions) throws IOException {
         Map<String, Integer> dependencies = new TreeMap<>();
 
-        Files.list(directoryPath).forEach(path -> {
-            File file = path.toFile();
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                File f = file.toFile();
 
-            if (file.isFile() && extensions.stream().anyMatch(ext -> file.getName().toLowerCase().endsWith(ext))) {
-                try (InputStream stream = new FileInputStream(file)) {
-                    this.analyze(stream).forEach((key, val) -> {
-                        Integer count = dependencies.get(key);
-                        dependencies.put(key, count != null ? count + val : val);
-                    });
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
+                if (extensions.stream().anyMatch(ext -> f.getName().toLowerCase().endsWith(ext))) {
+                    try (InputStream stream = new FileInputStream(f)) {
+                        ReferencedDependency.this.analyze(stream).forEach((key, val) -> {
+                            Integer count = dependencies.get(key);
+                            dependencies.put(key, count != null ? count + val : val);
+                        });
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
                 }
-                return;
-            }
 
-            if (file.isDirectory()) {
-                try {
-                    this.analyze(path, extensions).forEach((key, val) -> {
-                        Integer count = dependencies.get(key);
-                        dependencies.put(key, count != null ? count + val : val);
-                    });
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
-                }
-                return;
+                return super.visitFile(file, attrs);
             }
         });
 
