@@ -1,8 +1,11 @@
 package com.yo1000.winchester.analyzer;
 
 import java.io.*;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
 /**
@@ -18,25 +21,20 @@ public class CyclomaticComplexity implements Analyzer {
     public Map<String, Integer> analyze(Path directory, List<String> extensions) throws IOException {
         Map<String, Integer> dependencies = new TreeMap<>();
 
-        Files.list(directory).forEach(path -> {
-            File file = path.toFile();
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                File f = file.toFile();
 
-            if (file.isFile() && extensions.stream().anyMatch(ext -> file.getName().toLowerCase().endsWith(ext))) {
-                try (FileInputStream stream = new FileInputStream(path.toFile())) {
-                    dependencies.put(path.toString(), this.analyze(stream));
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
+                if (extensions.stream().anyMatch(ext -> f.getName().toLowerCase().endsWith(ext))) {
+                    try (FileInputStream stream = new FileInputStream(f)) {
+                        dependencies.put(file.toString(), CyclomaticComplexity.this.analyze(stream));
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
                 }
-                return;
-            }
 
-            if (file.isDirectory()) {
-                try {
-                    dependencies.putAll(this.analyze(path, extensions));
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
-                }
-                return;
+                return super.visitFile(file, attrs);
             }
         });
 
