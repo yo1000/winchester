@@ -41,8 +41,9 @@ public class SyntheticComplexity extends CyclomaticComplexity {
                             matcher.find() ? matcher.group(1).replaceAll("\\..+", "") : "",
                             entry.getValue());
                 })
-                .filter(entry -> !entry.getKey().isEmpty())
-                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+                .filter(entry -> !entry.getKey().isEmpty() && entry.getValue() != null)
+                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue(),
+                        (i1, i2) -> i1 > i2 ? i1 : i2));
 
         Map<String, Set<String>> relations = this.analyze(directory).entrySet().parallelStream()
                 .map(entry -> {
